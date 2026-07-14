@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'accounts',
     'drf_spectacular',
     'rest_framework_simplejwt.token_blacklist',
+    'events',
+    
 ]
 
 MIDDLEWARE = [
@@ -120,6 +122,16 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'EventFlow API',
+    'DESCRIPTION': 'Event registration platform API',
+    'VERSION': '1.0.0',
+    'TAGS': [
+        {'name': 'Accounts', 'description': 'Auth, users, password reset'},
+        {'name': 'Events', 'description': 'Organiser event management'},
+    ],
 }
 
 SIMPLE_JWT = {
