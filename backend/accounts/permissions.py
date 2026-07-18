@@ -25,3 +25,9 @@ class IsAttendee(BasePermission):
             request.user.is_authenticated
             and request.user.role == User.Role.ATTENDEE
         )
+class IsAttendeeOrOrganiser(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in {
+            User.Role.ATTENDEE,
+            User.Role.ORGANISER,
+        }

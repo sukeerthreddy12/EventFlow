@@ -20,10 +20,14 @@ from accounts import urls as accounts_urls
 from django.urls import include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from events import urls as events_urls
+from registrations import urls as registrations_urls
+from tickets import urls as tickets_urls
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/accounts/', include(accounts_urls)),
     path('api/events/', include(events_urls)),
+    path('api/registrations/', include(registrations_urls)),
+    path('api/tickets/', include(tickets_urls)),
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]

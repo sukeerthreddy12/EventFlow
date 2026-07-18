@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'rest_framework_simplejwt.token_blacklist',
     'events',
+    'registrations',
+    'tickets',
     
 ]
 
@@ -131,6 +133,8 @@ SPECTACULAR_SETTINGS = {
     'TAGS': [
         {'name': 'Accounts', 'description': 'Auth, users, password reset'},
         {'name': 'Events', 'description': 'Organiser event management'},
+        {'name': 'Registrations', 'description': 'Attendee registraions and waitlist '},
+        {'name': 'Tickets', 'description': 'Ticket management and check-in'},
     ],
 }
 
