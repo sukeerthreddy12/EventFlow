@@ -1,28 +1,20 @@
 # EventFlow
 
-Event registration platform for organisers and attendees — individual and group sign-ups, capacity-aware waitlists, tickets/check-in, and email notifications.
+Event registration platform for organisers and attendees — capacity-aware waitlists, tickets/check-in, and (planned) group sign-ups and async email notifications.
+
+**Progress (approx.):** backend core ~55–60% · full product (incl. React) ~40–45%
 
 ## Stack
 
-| Layer | Tech |
-|-------|------|
-| API | Django 6 + Django REST Framework |
-| Auth | JWT (SimpleJWT) with refresh rotation |
-| DB | PostgreSQL |
-| Cache / tokens | Redis |
-| Async jobs | Celery + Celery Beat (planned) |
-| Frontend | React (planned) |
-
-## Apps
-
-| App | Role | Status |
-|-----|------|--------|
-| `accounts` | Users, roles, auth, email verify, password reset | **Done** |
-| `events` | Organiser event lifecycle (draft → published → completed/cancelled) | Planned |
-| `registrations` | Individual + team registration, capacity, waitlist | Planned |
-| `tickets` | UUID tickets, check-in | Planned |
-| `notifications` | Celery emails (confirm, waitlist, cancel, reminders) | Planned |
-| `analytics` | Stats, revenue, ops views | Planned |
+| Layer | Tech | Status |
+|-------|------|--------|
+| API | Django 6 + Django REST Framework | In use |
+| Auth | JWT (SimpleJWT) with refresh rotation + blacklist | Done |
+| DB | PostgreSQL | In use |
+| Cache / tokens | Redis | In use (verify + password-reset tokens) |
+| Docs | drf-spectacular (`/docs/`) | Done |
+| Async jobs | Celery + Celery Beat | Planned |
+| Frontend | React | Not started |
 
 ### Roles
 
@@ -30,45 +22,92 @@ Event registration platform for organisers and attendees — individual and grou
 
 ---
 
-## What’s built (`accounts`)
+## Progress by app
 
-- Custom `User` model with role field
-- Register → verification email (Redis token, 15‑min TTL)
-- Login → JWT access + refresh; refresh token rotation
+| App | Role | Status |
+|-----|------|--------|
+| `accounts` | Users, roles, auth, email verify, password reset | **Done** (~95%) |
+| `events` | Organiser CRUD, publish/unpublish, soft delete | **Core done** (~70%) |
+| `registrations` | Individual register, waitlist, cancel + promote | **Core done** (~90%) |
+| `tickets` | Auto-issue on confirm, cancel ticket, check-in | **Core done** (~90%) |
+| `notifications` | Celery emails (confirm, waitlist, cancel, reminders) | **Not started** |
+| `analytics` | Stats, revenue, ops APIs | **Not started** |
+| Frontend | React UI wired to all APIs | **Not started** |
+
+---
+
+## What’s built
+
+### Accounts
+- Custom `User` model with `role`
+- Register → verification email (Redis token, TTL)
+- Login → JWT access + refresh; refresh rotation + blacklist
 - Password reset (single-use Redis token)
-- Role permission classes: `IsAdmin`, `IsOrganiser`, `IsAttendee`
+- Permission classes: `IsAdmin`, `IsOrganiser`, `IsAttendee` (+ composites as needed)
+- `GET /api/accounts/me/`
+
+### Events
+- `Event` model (title, description, venue, times, capacity, price, status, organiser)
+- Create as **DRAFT** (organiser only); list/detail/update own events
+- **Publish** / **unpublish** (`DRAFT` ↔ `PUBLISHED`)
+- **Soft delete** (row kept, hidden from API lists)
+- Organiser can only modify their own events
+
+### Registrations (individual)
+- `Registration` statuses: `CONFIRMED` / `WAITLISTED` / `CANCELLED`
+- `POST /api/registrations/` with `event_id` (attendee/organiser registering for others’ events)
+- Seat lock: `select_for_update()` inside `transaction.atomic()` (Postgres)
+- Unlimited waitlist when full; promote oldest waitlisted on confirmed cancel (same transaction)
+- Partial unique constraint: one **active** registration per user per event (re-register after cancel allowed)
+- Concurrency smoke-tested (last seat → one confirmed, one waitlisted)
+
+### Tickets
+- One ticket per registration (`OneToOne`); UUID scan `token`
+- Auto-issued when registration becomes `CONFIRMED` (register + waitlist promote)
+- Ticket cancelled when confirmed registration is cancelled
+- `POST /api/tickets/check-in/` — organiser of that event; idempotent (`USED` → still 200)
+
+### Infra
+- Docker Compose: Postgres, Redis, pgAdmin
+- Secrets via `backend/.env` (not committed); `DJANGO_SECRET_KEY` from env
+- OpenAPI docs tagged: Accounts / Events / Registrations / Tickets
 
 ---
 
-## What’s coming
+## What’s next (priority)
 
-### Events (organiser-facing)
-Create and manage events with capacity and pricing. Lifecycle: **DRAFT → PUBLISHED → ONGOING → COMPLETED / CANCELLED**. Soft delete, cancel-with-refund flag, and admin override for platform-wide suppress/feature.
-
-### Registrations
-Seat locking with `select_for_update()` under Postgres, waitlist when full, auto-promotion on cancel, and a hard unique constraint (one active registration per user per event). Group/team registration reserves multiple seats in one go.
-
-### Tickets & check-in
-UUID ticket per confirmed registration. Idempotent check-in (second scan returns success, not an error).
-
-### Notifications
-Celery workers for confirmation, waitlist, cancellation, and 24‑hour reminders. Separate worker + beat processes; failed-send retry queue.
-
-### Admin / analytics
-Per-event registration counts, check-in rate, waitlist depth, and organiser revenue summaries — plus Django admin for ops.
-
-### Cross-cutting
-Structured DRF errors, pagination, CORS for React, UTC timezone discipline, and permission tests on every endpoint.
+1. **Frontend (React)** — auth flows, organiser event UI, attendee register, ticket/QR, check-in scanner; wire to existing APIs; CORS
+2. **Team / group registration** — multi-seat blocks + waitlist rule for teams
+3. **Celery notifications** — confirm, waitlist, promote, cancel, 24h reminders; worker + beat
+4. **Events leftovers** — cancel + refund flag + bulk notify; admin feature/suppress; derived or scheduled `ONGOING` / `COMPLETED`
+5. **Analytics** — regs per event, check-in rate, waitlist depth, organiser revenue
+6. **Cross-cutting** — pagination, structured exception handler, broader permission tests
 
 ---
 
-## Hard problems (design focus)
+## Main API surface (backend)
 
-1. **Seat locking** — concurrent registration must be race-safe on Postgres  
-2. **Waitlist promotion** — same transaction as cancel; clear rule for team-sized blocks  
-3. **JWT refresh** — rotation + frontend interceptor without retry loops  
-4. **Idempotent check-in** — atomic check-and-update  
-5. **Celery reliability** — retries and silent failure if worker/beat aren’t running  
+| Area | Endpoints (summary) |
+|------|---------------------|
+| Accounts | `register/`, `verify-email/`, `login/`, `token/refresh/`, `password-reset/`, `password-reset-confirm/`, `me/` |
+| Events | `GET|POST /api/events/`, `GET|PATCH|DELETE /api/events/<id>/`, `.../publish/`, `.../unpublish/` |
+| Registrations | `GET|POST /api/registrations/`, `POST /api/registrations/<id>/cancel/` |
+| Tickets | `POST /api/tickets/check-in/` |
+
+Interactive docs: `http://127.0.0.1:8000/docs/`
+
+---
+
+## Hard problems (status)
+
+| Concern | Status |
+|---------|--------|
+| Seat locking (Postgres + concurrency) | **Done** for individual regs |
+| Waitlist promotion in same transaction as cancel | **Done** |
+| Idempotent check-in | **Done** |
+| JWT refresh + FE interceptor (no retry loops) | Backend done; **FE pending** |
+| Team-sized waitlist / capacity | **Not started** |
+| Celery reliability | **Not started** |
 
 ---
 
@@ -79,13 +118,13 @@ Structured DRF errors, pagination, CORS for React, UTC timezone discipline, and 
 uv sync
 
 cd backend
-# copy/create .env (never commit it) — see required vars below
+# create backend/.env (never commit it) — see vars below
 docker compose up -d          # Postgres, Redis, pgAdmin
 uv run python manage.py migrate
 uv run python manage.py runserver
 ```
 
-### Required `.env` (example names only)
+### Required `.env` (placeholder names only)
 
 ```env
 DJANGO_SECRET_KEY=
@@ -105,11 +144,14 @@ Do **not** commit `backend/.env` or `.venv`.
 
 ```
 Eventflow/
-├── backend/          # Django project
-│   ├── accounts/     # auth & users (shipped)
-│   ├── backend/      # settings, urls
+├── backend/
+│   ├── accounts/         # auth & users
+│   ├── events/           # organiser events
+│   ├── registrations/    # individual regs + waitlist
+│   ├── tickets/          # tickets + check-in
+│   ├── backend/          # settings, root urls
 │   └── docker-compose.yaml
-├── Frontend/         # React (coming)
+├── Frontend/             # React (coming)
 ├── pyproject.toml
 └── README.md
 ```
