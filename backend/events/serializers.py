@@ -16,6 +16,9 @@ class EventSerializer(serializers.ModelSerializer):
             "max_capacity",
             "price",
             "status",
+            "refund_eligible",
+            "is_featured",
+            "is_suppressed",
             "organiser",
             "created_at",
             "updated_at",
@@ -89,6 +92,17 @@ class EventUpdateSerializer(serializers.ModelSerializer):
         if ends_at <= starts_at:
             raise serializers.ValidationError(
                 {"ends_at": "End time must be after start time."}
+            )
+        return attrs
+
+class EventAdminOverrideSerializer(serializers.Serializer):
+    is_featured = serializers.BooleanField(required=False)
+    is_suppressed = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError(
+                "Provide is_featured and/or is_suppressed."
             )
         return attrs
 

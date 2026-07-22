@@ -9,10 +9,12 @@ from accounts.permissions import IsOrganiser
 
 from .models import Event
 from .permissions import IsEventOrganiser
+from accounts.permissions import IsAdmin
 from .serializers import (
     EventCreateSerializer,
     EventSerializer,
     EventUpdateSerializer,
+    EventAdminOverrideSerializer,
 )
 
 
@@ -110,4 +112,63 @@ class EventUnpublishView(APIView):
             )
         event.status = Event.Status.DRAFT
         event.save(update_fields=["status", "updated_at"])
+        return Response(EventSerializer(event).data, status=status.HTTP_200_OK)
+
+@extend_schema_view(
+    post=extend_schema(tags=["Events"], summary="Cancel event"),
+)
+class EventCancelView(APIView):
+    permission_classes = [IsAuthenticated, IsOrganiser, IsEventOrganiser]
+
+    def get_object(self):
+        event = generics.get_object_or_404(
+            Event,
+            pk=self.kwargs["pk"],
+            organiser=self.request.user,
+            is_deleted=False,
+        )
+        self.check_object_permissions(self.request, event)
+        return event
+
+    def post(self, request, pk):
+        event = self.get_object()
+
+        if event.status == Event.Status.CANCELLED:
+            return Response(
+                {"detail": "Event is already cancelled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if event.status == Event.Status.COMPLETED:
+            return Response(
+                {"detail": "Completed events cannot be cancelled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Allow cancel from DRAFT / PUBLISHED / ONGOING
+        event.status = Event.Status.CANCELLED
+        event.refund_eligible = True
+        event.save(update_fields=["status", "refund_eligible", "updated_at"])
+
+        # TODO: bulk notify all registrants (Celery) — Phase notifications
+
+        return Response(EventSerializer(event).data, status=status.HTTP_200_OK)
+@extend_schema_view(
+    patch=extend_schema(
+        tags=["Events"],
+        summary="Admin override (feature/suppress)",
+        request=EventAdminOverrideSerializer,
+    ),
+)
+class EventAdminOverrideView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
+    def patch(self, request, pk):
+        event = generics.get_object_or_404(Event, pk=pk, is_deleted=False)
+        serializer = EventAdminOverrideSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        for field, value in serializer.validated_data.items():
+            setattr(event, field, value)
+        event.save(
+            update_fields=[*serializer.validated_data.keys(), "updated_at"]
+        )
         return Response(EventSerializer(event).data, status=status.HTTP_200_OK)

@@ -26,6 +26,9 @@ class Event(models.Model):
         choices=Status.choices,
         default=Status.DRAFT,
     )
+    refund_eligible = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False)
+    is_suppressed = models.BooleanField(default=False)
     organiser = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -46,3 +49,4 @@ class Event(models.Model):
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])
+    

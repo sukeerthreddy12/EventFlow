@@ -64,6 +64,9 @@ class RegistrationListCreateView(generics.ListCreateAPIView):
 
             if locked_event.organiser_id == user.id:
                 raise ValueError("You cannot register for your own event.")
+
+            if locked_event.is_suppressed:
+                raise ValueError("This event is not available for registration.")
             
 
             # Re-check duplicate inside the lock
