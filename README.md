@@ -2,7 +2,7 @@
 
 Event registration platform for organisers and attendees — capacity-aware waitlists, tickets/check-in, and (planned) group sign-ups and async email notifications.
 
-**Progress (approx.):** backend core ~55–60% · full product (incl. React) ~40–45%
+**Progress (approx.):** backend core ~65–70% · full product (incl. React) ~45–50%
 
 ## Stack
 
@@ -27,9 +27,9 @@ Event registration platform for organisers and attendees — capacity-aware wait
 | App | Role | Status |
 |-----|------|--------|
 | `accounts` | Users, roles, auth, email verify, password reset | **Done** (~95%) |
-| `events` | Organiser CRUD, publish/unpublish, soft delete | **Core done** (~70%) |
+| `events` | Organiser CRUD, publish/unpublish/cancel, soft delete, admin override | **Core done** (~85%) |
 | `registrations` | Individual register, waitlist, cancel + promote | **Core done** (~90%) |
-| `tickets` | Auto-issue on confirm, cancel ticket, check-in | **Core done** (~90%) |
+| `tickets` | Auto-issue on confirm, cancel ticket, check-in by token | **Core done** (~95%) |
 | `notifications` | Celery emails (confirm, waitlist, cancel, reminders) | **Not started** |
 | `analytics` | Stats, revenue, ops APIs | **Not started** |
 | Frontend | React UI wired to all APIs | **Not started** |
@@ -50,8 +50,11 @@ Event registration platform for organisers and attendees — capacity-aware wait
 - `Event` model (title, description, venue, times, capacity, price, status, organiser)
 - Create as **DRAFT** (organiser only); list/detail/update own events
 - **Publish** / **unpublish** (`DRAFT` ↔ `PUBLISHED`)
+- **Cancel** — sets `CANCELLED` + `refund_eligible=True` (bulk notify deferred to Celery)
 - **Soft delete** (row kept, hidden from API lists)
 - Organiser can only modify their own events
+- **Admin override** — `PATCH .../admin-override/` sets `is_featured` / `is_suppressed` (admin only, any event)
+- Suppressed events block new registrations
 
 ### Registrations (individual)
 - `Registration` statuses: `CONFIRMED` / `WAITLISTED` / `CANCELLED`
@@ -62,10 +65,10 @@ Event registration platform for organisers and attendees — capacity-aware wait
 - Concurrency smoke-tested (last seat → one confirmed, one waitlisted)
 
 ### Tickets
-- One ticket per registration (`OneToOne`); UUID scan `token`
+- One ticket per registration (`OneToOne`); scan `token`
 - Auto-issued when registration becomes `CONFIRMED` (register + waitlist promote)
 - Ticket cancelled when confirmed registration is cancelled
-- `POST /api/tickets/check-in/` — organiser of that event; idempotent (`USED` → still 200)
+- `POST /api/tickets/check-in/` with `{ "token": "..." }` — organiser of that event; marks `USED`; idempotent (`USED` → still 200)
 
 ### Infra
 - Docker Compose: Postgres, Redis, pgAdmin
@@ -76,10 +79,10 @@ Event registration platform for organisers and attendees — capacity-aware wait
 
 ## What’s next (priority)
 
-1. **Frontend (React)** — auth flows, organiser event UI, attendee register, ticket/QR, check-in scanner; wire to existing APIs; CORS
-2. **Team / group registration** — multi-seat blocks + waitlist rule for teams
-3. **Celery notifications** — confirm, waitlist, promote, cancel, 24h reminders; worker + beat
-4. **Events leftovers** — cancel + refund flag + bulk notify; admin feature/suppress; derived or scheduled `ONGOING` / `COMPLETED`
+1. **Team / group registration** — multi-seat blocks + waitlist rule for teams
+2. **Celery notifications** — confirm, waitlist, promote, cancel, 24h reminders; worker + beat
+3. **Frontend (React)** — auth flows, organiser event UI, attendee register, ticket/QR, check-in scanner; CORS
+4. **Events leftovers** — derived or scheduled `ONGOING` / `COMPLETED`; public attendee event catalog
 5. **Analytics** — regs per event, check-in rate, waitlist depth, organiser revenue
 6. **Cross-cutting** — pagination, structured exception handler, broader permission tests
 
@@ -90,9 +93,9 @@ Event registration platform for organisers and attendees — capacity-aware wait
 | Area | Endpoints (summary) |
 |------|---------------------|
 | Accounts | `register/`, `verify-email/`, `login/`, `token/refresh/`, `password-reset/`, `password-reset-confirm/`, `me/` |
-| Events | `GET|POST /api/events/`, `GET|PATCH|DELETE /api/events/<id>/`, `.../publish/`, `.../unpublish/` |
-| Registrations | `GET|POST /api/registrations/`, `POST /api/registrations/<id>/cancel/` |
-| Tickets | `POST /api/tickets/check-in/` |
+| Events | `GET\|POST /api/events/`, `GET\|PATCH\|DELETE /api/events/<id>/`, `.../publish/`, `.../unpublish/`, `.../cancel/`, `PATCH .../admin-override/` |
+| Registrations | `GET\|POST /api/registrations/`, `POST /api/registrations/<id>/cancel/` |
+| Tickets | `POST /api/tickets/check-in/` (`token` in body) |
 
 Interactive docs: `http://127.0.0.1:8000/docs/`
 
@@ -104,7 +107,7 @@ Interactive docs: `http://127.0.0.1:8000/docs/`
 |---------|--------|
 | Seat locking (Postgres + concurrency) | **Done** for individual regs |
 | Waitlist promotion in same transaction as cancel | **Done** |
-| Idempotent check-in | **Done** |
+| Idempotent check-in (by token) | **Done** |
 | JWT refresh + FE interceptor (no retry loops) | Backend done; **FE pending** |
 | Team-sized waitlist / capacity | **Not started** |
 | Celery reliability | **Not started** |
@@ -146,7 +149,7 @@ Do **not** commit `backend/.env` or `.venv`.
 Eventflow/
 ├── backend/
 │   ├── accounts/         # auth & users
-│   ├── events/           # organiser events
+│   ├── events/           # organiser events + admin override
 │   ├── registrations/    # individual regs + waitlist
 │   ├── tickets/          # tickets + check-in
 │   ├── backend/          # settings, root urls
