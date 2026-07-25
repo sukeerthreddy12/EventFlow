@@ -5,6 +5,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 
+
+from notifications.tasks import send_event_cancelled_task
+from registrations.models import Registration
+from django.db import transaction
+
+
 from accounts.permissions import IsOrganiser
 
 from .models import Event
@@ -149,6 +155,22 @@ class EventCancelView(APIView):
         event.status = Event.Status.CANCELLED
         event.refund_eligible = True
         event.save(update_fields=["status", "refund_eligible", "updated_at"])
+
+        registrant_ids = list(
+            Registration.objects.filter(
+                event=event,
+                status__in=[
+                    Registration.Status.CONFIRMED,
+                    Registration.Status.WAITLISTED,
+                ],
+            ).values_list("user_id", flat=True)
+        )
+        event_id = str(event.id)
+        for user_id in registrant_ids:
+            uid = str(user_id)
+            transaction.on_commit(
+                lambda uid=uid: send_event_cancelled_task.delay(uid, event_id)
+            )
 
         # TODO: bulk notify all registrants (Celery) — Phase notifications
 
