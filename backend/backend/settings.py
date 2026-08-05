@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'accounts',
     'drf_spectacular',
@@ -54,12 +56,18 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -151,15 +159,29 @@ SIMPLE_JWT = {
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 EMAIL_VERIFICATION_TTL = int(os.environ.get('EMAIL_VERIFICATION_TTL', '900'))
 PASSWORD_RESET_TTL = int(os.environ.get('PASSWORD_RESET_TTL', '900'))
-FRONTEND_PASSWORD_RESET_URL = os.environ.get(
-    'FRONTEND_PASSWORD_RESET_URL',
-    'http://localhost:3000/reset-password',
+
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",
 )
-
-
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@eventplatform.local')
-FRONTEND_VERIFY_URL = os.environ.get('FRONTEND_VERIFY_URL', 'http://localhost:3000/verify-email')
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "465"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False").lower() == "true"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "True").lower() == "true"
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    "noreply@eventplatform.local",
+)
+FRONTEND_VERIFY_URL = os.environ.get(
+    "FRONTEND_VERIFY_URL",
+    "http://localhost:5173/verify-email",
+)
+FRONTEND_PASSWORD_RESET_URL = os.environ.get(
+    "FRONTEND_PASSWORD_RESET_URL",
+    "http://localhost:5173/reset-password",
+)
 
 
 # Internationalization
@@ -180,6 +202,20 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
+
+
+CELERY_BEAT_SCHEDULE = {
+    "dispatch-24h-event-reminders": {
+        "task": "notifications.tasks.dispatch_upcoming_event_reminders",
+        "schedule": 60 * 15,  # every 15 minutes
+        # or: "schedule": crontab(minute="*/15"),
+    },
+    "process-email-retry-queue": {
+        "task": "notifications.tasks.process_email_retry_queue",
+        "schedule": 60,  # every minute while developing; use 60*5 in prod
+    },
+}
+
 
 
 # Static files (CSS, JavaScript, Images)

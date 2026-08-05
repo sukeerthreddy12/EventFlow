@@ -35,6 +35,7 @@ class Registration(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["created_at"]

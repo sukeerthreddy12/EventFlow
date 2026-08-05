@@ -61,3 +61,18 @@ def send_event_cancelled_email(user: User, event: Event) -> None:
         recipient_list=[user.email],
         fail_silently=False,
     )
+
+def send_event_reminder_email(user: User, event: Event) -> None:
+    send_mail(
+        subject=f"Reminder: {event.title} is tomorrow",
+        message=(
+            f"Hi {user.username},\n\n"
+            f"This is a reminder that {event.title} starts in about 24 hours.\n"
+            f"Venue: {event.venue}\n"
+            f"Starts: {event.starts_at}\n"
+            f"Ends: {event.ends_at}\n"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )

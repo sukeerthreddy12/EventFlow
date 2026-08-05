@@ -1,6 +1,6 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -21,7 +21,36 @@ from .serializers import (
     EventSerializer,
     EventUpdateSerializer,
     EventAdminOverrideSerializer,
+    PublicEventSerializer,
 )
+
+@extend_schema_view(
+    get=extend_schema(tags=["Events"], summary="List published events (public)"),
+)
+class PublicEventListView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = PublicEventSerializer
+    def get_queryset(self):
+        return Event.objects.filter(
+            status=Event.Status.PUBLISHED,
+            is_deleted=False,
+            is_suppressed=False,
+        )
+
+@extend_schema_view(
+    get=extend_schema(tags=["Events"], summary="Published event detail (public)"),
+)
+class PublicEventDetailView(generics.RetrieveAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = PublicEventSerializer
+
+    def get_queryset(self):
+        return Event.objects.filter(
+            status=Event.Status.PUBLISHED,
+            is_deleted=False,
+            is_suppressed=False,
+        )
+
 
 
 @extend_schema_view(

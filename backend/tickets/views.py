@@ -5,7 +5,7 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.permissions import IsOrganiser
+from accounts.permissions import IsOrganiser,IsAttendeeOrOrganiser
 
 from .models import Ticket
 from .serializers import TicketCheckInSerializer, TicketSerializer
@@ -47,3 +47,16 @@ class TicketCheckInView(generics.GenericAPIView):
         ticket.save(update_fields=["status", "checked_in_at", "updated_at"])
 
         return Response(TicketSerializer(ticket).data, status=status.HTTP_200_OK)
+
+
+@extend_schema(tags=["Tickets"], summary="Get my ticket for a registration")
+class MyTicketByRegistrationView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated, IsAttendeeOrOrganiser]
+    serializer_class = TicketSerializer
+    def get_object(self):
+        ticket = get_object_or_404(
+            Ticket.objects.select_related("registration"),
+            registration_id=self.kwargs["registration_id"],
+            registration__user=self.request.user,
+        )
+        return ticket
