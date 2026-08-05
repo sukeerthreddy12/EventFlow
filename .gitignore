@@ -11,3 +11,6 @@ wheels/
 
 # Environment variables
 .env
+# Celery beat schedule file
+celerybeat-schedule
+celerybeat-schedule.*
