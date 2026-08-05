@@ -1,0 +1,15 @@
+:root {
+    --bg-deep: #0e1218;
+    --bg-raised: #161c26;
+    --ink: #e8ecf2;
+    --muted: #9aa3b2;
+    --accent: #e8a54b;      /* warm amber */
+    --accent-dim: #c4842f;
+    --danger: #e85d5d;
+    --ok: #5dcea0;
+    --line: rgba(232, 236, 242, 0.08);
+    --font-display: "Outfit", system-ui, sans-serif;
+    --font-body: "Outfit", system-ui, sans-serif;
+    --radius: 4px;          /* sharp, not pill-heavy */
+    --space: 1rem;
+  }
