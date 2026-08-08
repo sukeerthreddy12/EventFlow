@@ -191,16 +191,6 @@ POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 REDIS_URL=redis://localhost:6379/0
 
-# Email (Mailtrap example for local)
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=sandbox.smtp.mailtrap.io
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_USE_SSL=False
-EMAIL_HOST_USER=
-EMAIL_HOST_PASSWORD=
-DEFAULT_FROM_EMAIL=EventFlow <noreply@eventflow.test>
-
 FRONTEND_VERIFY_URL=http://localhost:5173/verify-email
 FRONTEND_PASSWORD_RESET_URL=http://localhost:5173/reset-password
 ```
