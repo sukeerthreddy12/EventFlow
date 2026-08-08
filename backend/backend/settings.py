@@ -214,6 +214,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "notifications.tasks.process_email_retry_queue",
         "schedule": 60,  # every minute while developing; use 60*5 in prod
     },
+    "advance-event-statuses": {
+        "task": "events.tasks.advance_event_statuses",
+        "schedule": 60,  # every minute
+    },
 }
 
 

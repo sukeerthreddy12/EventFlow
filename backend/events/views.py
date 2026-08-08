@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from notifications.tasks import send_event_cancelled_task
 from registrations.models import Registration
 from django.db import transaction
+from django.utils import timezone
 
 
 from accounts.permissions import IsOrganiser
@@ -116,6 +117,17 @@ class EventPublishView(APIView):
         if event.status != Event.Status.DRAFT:
             return Response(
                 {"detail": "Only DRAFT events can be published."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        now = timezone.now()
+        if event.ends_at <= now:
+            return Response(
+                {"detail": "Cannot publish an event that has already ended."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if event.starts_at <= now:
+            return Response(
+                {"detail": "Cannot publish an event that has already started. Update the schedule first."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         event.status = Event.Status.PUBLISHED

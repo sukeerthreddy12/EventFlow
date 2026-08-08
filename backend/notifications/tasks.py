@@ -60,6 +60,42 @@ def send_event_reminder_task(user_id: str, event_id: str) -> None:
     send_or_queue(EmailRetryQueue.Kind.EVENT_REMINDER, user, event)
 
 @shared_task
+def dispatch_upcoming_event_reminders() -> int:
+    """
+    Find CONFIRMED registrations for events starting ~24h from now
+    and send one reminder each (idempotent via reminder_sent_at).
+    Returns how many reminders were queued/sent this run.
+    """
+    now = timezone.now()
+    window_start = now + timedelta(hours=23, minutes=45)
+    window_end = now + timedelta(hours=24, minutes=15)
+
+    qs = (
+        Registration.objects.select_related("user", "event")
+        .filter(
+            status=Registration.Status.CONFIRMED,
+            reminder_sent_at__isnull=True,
+            event__starts_at__gte=window_start,
+            event__starts_at__lt=window_end,
+            event__status=Event.Status.PUBLISHED,
+            event__is_deleted=False,
+        )
+    )
+
+    sent = 0
+    for reg in qs.iterator():
+        send_or_queue(
+            EmailRetryQueue.Kind.EVENT_REMINDER,
+            reg.user,
+            reg.event,
+        )
+        reg.reminder_sent_at = now
+        reg.save(update_fields=["reminder_sent_at", "updated_at"])
+        sent += 1
+
+    return sent
+
+@shared_task
 def process_email_retry_queue(limit: int = 50) -> int:
     """
     Retry due PENDING rows. Returns number successfully sent this run.
