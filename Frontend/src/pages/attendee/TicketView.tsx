@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { getPublicEvent, type PublicEvent } from "../../api/events";
 import { listMyRegistrations, type Registration } from "../../api/registrations";
 import { getTicketByRegistration, type Ticket } from "../../api/tickets";
+import { QRCodeCanvas } from "qrcode.react";
+
 
 function formatWhen(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -89,7 +91,11 @@ export default function TicketView() {
         <p className="page-sub" style={{ marginTop: "1.25rem", marginBottom: 0 }}>
           Check-in token
         </p>
-        <div className="ticket-token">{ticket.token}</div>
+        <div className="ticket-qr" style={{ marginTop: "1.25rem", colorScheme: "light" }}>
+          
+        <QRCodeCanvas value={ticket.token} size={200} level="M" marginSize={4} />
+        </div>
+
 
         <p className="team-hint">
           QR codes can come later — organisers can paste this token into check-in.
