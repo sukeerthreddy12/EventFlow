@@ -1,8 +1,8 @@
 # EventFlow
 
-Event registration platform for organisers and attendees — capacity-aware waitlists, group sign-ups, tickets/check-in (with QR), and async email notifications (with Beat reminders + retry queue + event lifecycle).
+Event registration platform for organisers and attendees — capacity-aware waitlists, group sign-ups, tickets/check-in (with QR), organiser analytics, and async email notifications (with Beat reminders + retry queue + event lifecycle).
 
-**Progress (approx.):** backend ~95% · frontend product spine ~90–95% · full product (analytics + polish) ~80–85%
+**Progress (approx.):** backend ~95% · frontend ~95% · full product (deploy + polish) ~90%
 
 ## Stack
 
@@ -15,7 +15,7 @@ Event registration platform for organisers and attendees — capacity-aware wait
 | Docs | drf-spectacular (`/docs/`) | Done |
 | Async jobs | Celery **worker** + **Beat** | Done (reminders, retry queue, event status advance) |
 | Email (dev) | SMTP via **Mailtrap** (env-driven) | Done |
-| Frontend | React (Vite) + React Router + Axios | **Core spine done** (Night venue UI + ticket QR) |
+| Frontend | React (Vite) + React Router + Axios | **Done** (Night venue UI, ticket QR, organiser analytics) |
 | CORS | `django-cors-headers` → Vite `5173` | Done |
 
 ### Roles
@@ -33,8 +33,8 @@ Event registration platform for organisers and attendees — capacity-aware wait
 | `registrations` | Individual + team register, waitlist, cancel + promote, 24h reminder flag | **Done** (~95%) |
 | `tickets` | Auto-issue, cancel, check-in, get ticket by registration | **Done** (~95%) |
 | `notifications` | Celery emails, Beat 24h reminders, `EmailRetryQueue` | **Done** (~95%) |
-| `analytics` | Stats, revenue, ops APIs | **Not started** |
-| Frontend | Auth, catalog, register, tickets + **QR**, organiser, check-in | **Spine done** (~90–95%) |
+| `analytics` | Organiser summary + per-event stats (regs, waitlist, check-in rate, revenue) | **Done** (~95%) |
+| Frontend | Auth, catalog, register, tickets + **QR**, organiser CRUD, check-in, **analytics** | **Done** (~95%) |
 
 ---
 
@@ -50,7 +50,7 @@ Event registration platform for organisers and attendees — capacity-aware wait
 
 ### Events
 - `Event` model (title, description, venue, times, capacity, price, status, organiser)
-- Create as **DRAFT** (organiser only); list/detail/update own events
+- Create as **DRAFT** (organiser only); list/detail/update own events (response includes `id`)
 - **Publish** / **unpublish** (`DRAFT` ↔ `PUBLISHED`); publish blocked if event has already started/ended
 - **Cancel** — sets `CANCELLED` + `refund_eligible=True`; fans out cancel emails via Celery
 - **Soft delete** (row kept, hidden from API lists)
@@ -92,12 +92,22 @@ Event registration platform for organisers and attendees — capacity-aware wait
 - **`EmailRetryQueue`** — on SMTP failure, persist row; Beat runs `process_email_retry_queue` with backoff
 - Dev email via SMTP env (Mailtrap recommended); keep secrets in `backend/.env`
 
+### Analytics
+- Organiser summary: event count, confirmed / waitlisted / checked-in totals, overall check-in rate, total revenue (`price × confirmed`)
+- Per-event breakdown: capacity, waitlist depth, check-in rate, revenue
+- Auth: organiser-only (`IsOrganiser`); attendees get `403`
+- Frontend: `/org/analytics` (KPIs + charts)
+
 ### Frontend (`Frontend/`)
 - Vite + React + TS; Night venue tokens/CSS
 - Auth: register, verify email, login, forgot/reset password, JWT refresh interceptor, role guards
 - Attendee: public catalog, event detail (solo + team register), my registrations + cancel, ticket view **with QR**
-- Organiser: my events, create/edit draft, publish/unpublish/cancel/soft-delete, check-in by token
+- Organiser: my events, create/edit draft, publish/unpublish/cancel/soft-delete, check-in by token, **analytics**
 - Layouts: public / attendee / organiser
+
+### Cross-cutting
+- DRF pagination (`PageNumberPagination`, `PAGE_SIZE=20`)
+- Structured exception handler → `{ "detail": "...", "errors": {...}? }`
 
 ### Infra
 - Docker Compose: Postgres, Redis, pgAdmin
@@ -109,9 +119,9 @@ Event registration platform for organisers and attendees — capacity-aware wait
 
 ## What’s next (priority)
 
-1. **Analytics** — regs per event, check-in rate, waitlist depth, organiser revenue  
-2. **Cross-cutting** — pagination, structured exception handler, broader tests; create-event response includes `id`  
-3. **FE polish leftovers** — clearer API errors; optional camera scan on check-in; restore dedicated team-cancel smoke if desired  
+1. **Deploy** — Compose / Oracle for Django + Redis + worker + Beat + FE (`DEBUG=False`, secrets, CORS)
+2. **Polish** — broader tests (accounts), FE pagination UX, optional camera QR scan on check-in
+3. **Docs / demo** — keep seed + Mailtrap happy path ready for live proof of Celery delivery
 
 ---
 
@@ -123,6 +133,7 @@ Event registration platform for organisers and attendees — capacity-aware wait
 | Events | `GET\|POST /api/events/`, `GET\|PATCH\|DELETE /api/events/<id>/`, `.../publish/`, `.../unpublish/`, `.../cancel/`, `PATCH .../admin-override/`, **`GET /api/events/public/`**, **`GET /api/events/public/<id>/`** |
 | Registrations | `GET\|POST /api/registrations/`, `POST /api/registrations/team/`, `POST /api/registrations/<id>/cancel/` |
 | Tickets | `POST /api/tickets/check-in/`, **`GET /api/tickets/by-registration/<id>/`** |
+| Analytics | **`GET /api/analytics/organiser/summary/`**, **`GET /api/analytics/events/<id>/`** |
 
 Interactive docs: `http://127.0.0.1:8000/docs/`  
 Frontend: `http://localhost:5173`
@@ -142,6 +153,7 @@ Frontend: `http://localhost:5173`
 | Email retry queue (failed SMTP) | **Done** |
 | Event lifecycle `ONGOING` / `COMPLETED` (Beat) | **Done** |
 | Ticket QR → check-in token | **Done** (FE encodes token; same check-in API) |
+| Organiser analytics (regs / check-in / revenue) | **Done** |
 
 ---
 
@@ -179,13 +191,29 @@ npm install
 npm run dev
 ```
 
-### Optional smokes
+### Tests
 
 ```bash
 cd backend
-uv run python notifications/smoke_notification_hooks.py   # retry queue / hooks
-uv run python registrations/smoke_team_cancel_promote.py  # 24h reminder dispatcher smoke
+uv run python manage.py test registrations tickets analytics notifications events
 ```
+
+Covers register/waitlist/promote, check-in, analytics auth, 24h reminder Beat task, email retry queue, and event lifecycle (`ONGOING`/`COMPLETED`).
+
+### Demo seed
+
+```bash
+cd backend
+uv run python manage.py seed_demo
+```
+
+| Role | Email | Password |
+|------|-------|----------|
+| Organiser | `organiser@demo.com` | `DemoPass123!` |
+| Attendee | `attendee@demo.com` | `DemoPass123!` |
+| Teammate | `teammate@demo.com` | `DemoPass123!` |
+
+Featured demo event: **Neon Night Market**. Sign out (or clear localStorage) after a flush/reseed so old JWTs are not reused.
 
 ### Required `.env` (placeholder names only)
 
@@ -211,14 +239,15 @@ Do **not** commit `backend/.env`, `.venv`, or `celerybeat-schedule*`.
 ```
 Eventflow/
 ├── backend/
-│   ├── accounts/         # auth & users
+│   ├── accounts/         # auth & users (+ seed_demo)
 │   ├── events/           # organiser events + public catalog + admin override + lifecycle Beat task
 │   ├── registrations/    # individual + team regs + waitlist
 │   ├── tickets/          # tickets + check-in
 │   ├── notifications/    # Celery tasks, emails, retry queue, 24h reminders
-│   ├── backend/          # settings, celery app, root urls
+│   ├── analytics/        # organiser summary + per-event stats
+│   ├── backend/          # settings, celery app, root urls, exception handler
 │   └── docker-compose.yaml
-├── Frontend/             # React (Vite) Night venue UI
+├── Frontend/             # React (Vite) Night venue UI + analytics
 ├── pyproject.toml
 └── README.md
 ```
