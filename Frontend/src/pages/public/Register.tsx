@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { register } from "../../api/accounts";
+import { apiErrorMessage } from "../../api/errors";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -20,16 +20,7 @@ export default function Register() {
       await register({ username, email, password, role });
       navigate("/verify-email", { state: { email } });
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data;
-        setError(
-          typeof data === "object"
-            ? JSON.stringify(data)
-            : "Registration failed.",
-        );
-      } else {
-        setError("Registration failed.");
-      }
+      setError(apiErrorMessage(err, "Registration failed."));
     } finally {
       setSubmitting(false);
     }

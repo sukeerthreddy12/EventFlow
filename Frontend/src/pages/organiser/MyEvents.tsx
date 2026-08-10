@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
 import {
   cancelEvent,
   listMyEvents,
@@ -9,6 +8,7 @@ import {
   unpublishEvent,
   type OrganiserEvent,
 } from "../../api/organiserEvents";
+import { apiErrorMessage } from "../../api/errors";
 
 function formatWhen(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -67,14 +67,7 @@ export default function MyEvents() {
       await reload();
       after?.();
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data;
-        setError(
-          typeof data === "object" ? JSON.stringify(data) : "Action failed.",
-        );
-      } else {
-        setError("Action failed.");
-      }
+      setError(apiErrorMessage(err, "Action failed."));
     } finally {
       setBusyId(null);
     }

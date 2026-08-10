@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { useAuth } from "../../auth/AuthContext";
+import { apiErrorMessage } from "../../api/errors";
 
 export default function Login() {
   const { login } = useAuth();
@@ -19,14 +19,7 @@ export default function Login() {
       const user = await login(email, password);
       navigate(user.role === "ORGANISER" ? "/org/events" : "/app/events");
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data;
-        setError(
-          typeof data === "object" ? JSON.stringify(data) : "Login failed.",
-        );
-      } else {
-        setError("Login failed.");
-      }
+      setError(apiErrorMessage(err, "Login failed."));
     } finally {
       setSubmitting(false);
     }

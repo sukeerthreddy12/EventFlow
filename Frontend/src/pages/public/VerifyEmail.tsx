@@ -5,8 +5,8 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import axios from "axios";
 import { verifyEmail } from "../../api/accounts";
+import { apiErrorMessage } from "../../api/errors";
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
@@ -31,16 +31,7 @@ export default function VerifyEmail() {
       setMessage(res.message);
       setTimeout(() => navigate("/login"), 800);
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data;
-        setError(
-          typeof data === "object"
-            ? JSON.stringify(data)
-            : "Verification failed.",
-        );
-      } else {
-        setError("Verification failed.");
-      }
+      setError(apiErrorMessage(err, "Verification failed."));
     } finally {
       setSubmitting(false);
     }

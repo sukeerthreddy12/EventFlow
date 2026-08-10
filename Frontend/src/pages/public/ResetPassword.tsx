@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
 import { confirmPasswordReset } from "../../api/accounts";
+import { apiErrorMessage } from "../../api/errors";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -35,16 +35,7 @@ export default function ResetPassword() {
       setMessage(res.message);
       setTimeout(() => navigate("/login"), 800);
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data;
-        setError(
-          typeof data === "object"
-            ? JSON.stringify(data)
-            : "Reset failed.",
-        );
-      } else {
-        setError("Reset failed.");
-      }
+      setError(apiErrorMessage(err, "Reset failed."));
     } finally {
       setSubmitting(false);
     }

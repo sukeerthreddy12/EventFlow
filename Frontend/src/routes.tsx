@@ -17,6 +17,7 @@ import MyEvents from "./pages/organiser/MyEvents";
 import EventForm from "./pages/organiser/EventForm";
 import CheckIn from "./pages/organiser/CheckIn";
 import TicketView from "./pages/attendee/TicketView";
+import Analytics from "./pages/organiser/Analytics";
 
 export default function AppRoutes() {
   return (
@@ -47,6 +48,7 @@ export default function AppRoutes() {
           <Route path="/org" element={<OrganiserLayout />}>
             <Route index element={<Navigate to="events" replace />} />
             <Route path="events" element={<MyEvents />} />
+            <Route path="analytics" element={<Analytics />} />
             <Route path="events/new" element={<EventForm />} />
             <Route path="events/:id" element={<EventForm />} />
             <Route path="events/:id/check-in" element={<CheckIn />} />

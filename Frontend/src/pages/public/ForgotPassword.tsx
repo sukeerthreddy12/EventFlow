@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
 import { requestPasswordReset } from "../../api/accounts";
+import { apiErrorMessage } from "../../api/errors";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -18,16 +18,7 @@ export default function ForgotPassword() {
       const res = await requestPasswordReset(email);
       setMessage(res.message);
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data;
-        setError(
-          typeof data === "object"
-            ? JSON.stringify(data)
-            : "Request failed.",
-        );
-      } else {
-        setError("Request failed.");
-      }
+      setError(apiErrorMessage(err, "Request failed."));
     } finally {
       setSubmitting(false);
     }

@@ -13,6 +13,7 @@ export default function OrganiserLayout() {
         </Link>
         <nav className="topbar-nav">
           <Link to="/org/events">My events</Link>
+          <Link to="/org/analytics">Analytics</Link>
           <Link to="/org/events/new">New event</Link>
           <button
             type="button"

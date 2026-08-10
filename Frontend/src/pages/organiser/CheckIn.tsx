@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import axios from "axios";
 import { getMyEvent, type OrganiserEvent } from "../../api/organiserEvents";
 import { checkInTicket, type Ticket } from "../../api/tickets";
+import { apiErrorMessage } from "../../api/errors";
 
 export default function CheckIn() {
   const { id } = useParams<{ id: string }>();
@@ -53,16 +53,7 @@ export default function CheckIn() {
       setToken("");
       inputRef.current?.focus();
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data;
-        setError(
-          typeof data === "object"
-            ? JSON.stringify(data)
-            : "Check-in failed.",
-        );
-      } else {
-        setError("Check-in failed.");
-      }
+      setError(apiErrorMessage(err, "Check-in failed."));
     } finally {
       setSubmitting(false);
     }
@@ -100,7 +91,9 @@ export default function CheckIn() {
 
       {lastTicket && (
         <div className="checkin-result checkin-result--ok">
-          <strong>Gate OK — {lastTicket.status}</strong>
+          <strong>
+            {alreadyUsed ? "Already checked in" : "Gate OK"} — {lastTicket.status}
+          </strong>
           <p className="page-sub" style={{ marginBottom: 0 }}>
             {lastTicket.checked_in_at
               ? `Checked in at ${new Date(lastTicket.checked_in_at).toLocaleString()}`

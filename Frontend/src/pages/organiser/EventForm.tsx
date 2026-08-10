@@ -1,12 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
 import {
   createEvent,
   getMyEvent,
   updateEvent,
   type EventWritePayload,
 } from "../../api/organiserEvents";
+import { apiErrorMessage } from "../../api/errors";
 
 function toLocalInput(iso: string) {
   const d = new Date(iso);
@@ -96,14 +96,7 @@ export default function EventForm() {
       }
       
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data;
-        setError(
-          typeof data === "object" ? JSON.stringify(data) : "Save failed.",
-        );
-      } else {
-        setError("Save failed.");
-      }
+      setError(apiErrorMessage(err, "Save failed."));
     } finally {
       setSaving(false);
     }

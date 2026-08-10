@@ -14,11 +14,14 @@ export type PublicEvent = {
 };
 
 export async function listPublicEvents(): Promise<PublicEvent[]> {
-  const { data } = await api.get<PublicEvent[]>("/events/public/");
-  return data;
+  const { data } = await api.get<PublicEvent[] | { results: PublicEvent[] }>(
+    "/events/public/",
+  );
+  return Array.isArray(data) ? data : data.results;
 }
 
 export async function getPublicEvent(id: string): Promise<PublicEvent> {
   const { data } = await api.get<PublicEvent>(`/events/public/${id}/`);
   return data;
 }
+

@@ -1,16 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { listPublicEvents, type PublicEvent } from "../../api/events.ts";
-
-function formatWhen(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+import EventShowcase from "../../components/events/EventShowcase";
+import { listPublicEvents, type PublicEvent } from "../../api/events";
 
 export default function EventCatalog() {
   const [events, setEvents] = useState<PublicEvent[]>([]);
@@ -22,7 +12,10 @@ export default function EventCatalog() {
 
     listPublicEvents()
       .then((data) => {
-        if (!cancelled) setEvents(data);
+        if (cancelled) return;
+        const featured = data.filter((e) => e.is_featured);
+        const rest = data.filter((e) => !e.is_featured);
+        setEvents([...featured, ...rest]);
       })
       .catch(() => {
         if (!cancelled) {
@@ -39,36 +32,22 @@ export default function EventCatalog() {
   }, []);
 
   return (
-    <div>
-      <h1 className="page-title">Events</h1>
-      <p className="page-sub">Published nights worth showing up for.</p>
+    <div className="catalog-page">
+      <header className="catalog-head">
+        <h1 className="page-title">Events</h1>
+        <p className="page-sub">
+          Published nights worth showing up for — capacity, waitlists, and tickets
+          included.
+        </p>
+      </header>
 
       {loading && <p className="state-msg">Loading…</p>}
       {error && <p className="state-msg state-msg--error">{error}</p>}
-      {!loading && !error && events.length === 0 && (
-        <p className="state-msg">No published events yet.</p>
-      )}
-
-      {!loading && !error && events.length > 0 && (
-        <ul className="event-list">
-          {events.map((event) => (
-            <li key={event.id}>
-              <Link to={`/app/events/${event.id}`} className="event-row">
-                <div className="event-row-title">
-                  <span>{event.title}</span>
-                  <span className="event-price">
-                    {Number(event.price) === 0 ? "Free" : `$${event.price}`}
-                  </span>
-                </div>
-                <div className="event-row-meta">
-                  <span>{formatWhen(event.starts_at)}</span>
-                  <span>{event.venue}</span>
-                  <span>{event.max_capacity} seats</span>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+      {!loading && !error && (
+        <EventShowcase
+          events={events}
+          emptyMessage="No published events yet."
+        />
       )}
     </div>
   );

@@ -27,29 +27,31 @@ export type TeamRegistrationResult = {
     registrations: Registration[];
   };
   
-  export async function createTeamRegistration(
-    eventId: string,
-    memberEmails: string[],
-  ) {
-    const { data } = await api.post<TeamRegistrationResult>(
-      "/registrations/team/",
-      {
-        event_id: eventId,
-        member_emails: memberEmails,
-      },
-    );
-    return data;
-  }
+export async function createTeamRegistration(
+  eventId: string,
+  memberEmails: string[],
+) {
+  const { data } = await api.post<TeamRegistrationResult>(
+    "/registrations/team/",
+    {
+      event_id: eventId,
+      member_emails: memberEmails,
+    },
+  );
+  return data;
+}
 
-  export async function listMyRegistrations() {
-    const { data } = await api.get<Registration[]>("/registrations/");
-    return data;
-  }
-  
-  export async function cancelRegistration(id: string) {
-    const { data } = await api.post<Registration>(
-      `/registrations/${id}/cancel/`,
-    );
-    return data;
-  }
+export async function listMyRegistrations() {
+  const { data } = await api.get<Registration[] | { results: Registration[] }>(
+    "/registrations/",
+  );
+  return Array.isArray(data) ? data : data.results;
+}
+
+export async function cancelRegistration(id: string) {
+  const { data } = await api.post<Registration>(
+    `/registrations/${id}/cancel/`,
+  );
+  return data;
+}
 

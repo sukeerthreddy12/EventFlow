@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
 import { getPublicEvent, type PublicEvent } from "../../api/events";
 import {
   cancelRegistration,
   listMyRegistrations,
   type Registration,
 } from "../../api/registrations";
+import { apiErrorMessage } from "../../api/errors";
 
 type Row = Registration & { eventDetail?: PublicEvent | null };
 
@@ -72,14 +72,7 @@ export default function MyRegistrations() {
         prev.map((r) => (r.id === id ? { ...r, ...updated } : r)),
       );
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data;
-        setError(
-          typeof data === "object" ? JSON.stringify(data) : "Cancel failed.",
-        );
-      } else {
-        setError("Cancel failed.");
-      }
+      setError(apiErrorMessage(err, "Cancel failed."));
     } finally {
       setCancellingId(null);
     }

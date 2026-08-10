@@ -29,8 +29,10 @@ export type EventWritePayload = {
 };
 
 export async function listMyEvents() {
-  const { data } = await api.get<OrganiserEvent[]>("/events/");
-  return data;
+  const { data } = await api.get<OrganiserEvent[] | { results: OrganiserEvent[] }>(
+    "/events/",
+  );
+  return Array.isArray(data) ? data : data.results;
 }
 
 export async function getMyEvent(id: string) {
