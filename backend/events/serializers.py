@@ -56,6 +56,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
             "max_capacity",
             "price",
         ]
+        read_only_fields = ["id"]
 
     def validate_max_capacity(self, value):
         if value <= 0:

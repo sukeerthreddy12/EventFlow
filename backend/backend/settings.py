@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'registrations',
     'tickets',
     'notifications',
+    'analytics',
 ]
 
 MIDDLEWARE = [
@@ -132,6 +133,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'EXCEPTION_HANDLER': 'backend.exceptions.custom_exception_handler',
 }
 
 SPECTACULAR_SETTINGS = {
@@ -143,6 +147,8 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Events', 'description': 'Organiser event management'},
         {'name': 'Registrations', 'description': 'Attendee registraions and waitlist '},
         {'name': 'Tickets', 'description': 'Ticket management and check-in'},
+        {'name': 'Analytics', 'description': 'Organiser stats and revenue'},
+
     ],
 }
 
