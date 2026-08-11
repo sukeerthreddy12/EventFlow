@@ -14,7 +14,7 @@ Event registration platform for organisers and attendees — capacity-aware wait
 | Cache / tokens / broker | Redis | In use (auth tokens + Celery broker) |
 | Docs | drf-spectacular (`/docs/`) | Done |
 | Async jobs | Celery **worker** + **Beat** | Done (reminders, retry queue, event status advance) |
-| Email (dev) | SMTP via **Mailtrap** (env-driven) | Done |
+| Email | SMTP via **Gmail** (App Password, env-driven) | Done |
 | Frontend | React (Vite) + React Router + Axios | **Done** (Night venue UI, ticket QR, organiser analytics) |
 | CORS | `django-cors-headers` → Vite `5173` | Done |
 
@@ -90,7 +90,7 @@ Event registration platform for organisers and attendees — capacity-aware wait
   - registration confirmed, waitlist joined, waitlist promoted, event cancelled
   - **24h event reminders** (`dispatch_upcoming_event_reminders` on Beat schedule; idempotent via `reminder_sent_at`)
 - **`EmailRetryQueue`** — on SMTP failure, persist row; Beat runs `process_email_retry_queue` with backoff
-- Dev email via SMTP env (Mailtrap recommended); keep secrets in `backend/.env`
+- Email via SMTP env (**Gmail App Password** recommended for demos); keep secrets in `backend/.env`
 
 ### Analytics
 - Organiser summary: event count, confirmed / waitlisted / checked-in totals, overall check-in rate, total revenue (`price × confirmed`)
@@ -121,7 +121,7 @@ Event registration platform for organisers and attendees — capacity-aware wait
 
 1. **Deploy** — Compose / Oracle for Django + Redis + worker + Beat + FE (`DEBUG=False`, secrets, CORS)
 2. **Polish** — broader tests (accounts), FE pagination UX, optional camera QR scan on check-in
-3. **Docs / demo** — keep seed + Mailtrap happy path ready for live proof of Celery delivery
+3. **Docs / demo** — keep seed + Gmail SMTP happy path ready for live proof of Celery delivery
 
 ---
 
