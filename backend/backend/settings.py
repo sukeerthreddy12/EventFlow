@@ -29,9 +29,13 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if h.strip()
+]
 
 
 # Application definition
@@ -67,9 +71,20 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
+    o.strip()
+    for o in os.environ.get(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if o.strip()
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if o.strip()
+]
+
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -231,4 +246,6 @@ CELERY_BEAT_SCHEDULE = {
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+

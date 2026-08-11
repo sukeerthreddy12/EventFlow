@@ -211,9 +211,22 @@ uv run python manage.py seed_demo
 |------|-------|----------|
 | Organiser | `organiser@demo.com` | `DemoPass123!` |
 | Attendee | `attendee@demo.com` | `DemoPass123!` |
-| Teammate | `teammate@demo.com` | `DemoPass123!` |
+| Teammate (1st waitlist) | `teammate@demo.com` | `DemoPass123!` |
+| Jazz seat A | `seat_a@demo.com` | `DemoPass123!` |
+| Jazz seat B | `seat_b@demo.com` | `DemoPass123!` |
+| Jazz 2nd waitlist | `waitlist_b@demo.com` | `DemoPass123!` |
 
-Featured demo event: **Neon Night Market**. Sign out (or clear localStorage) after a flush/reseed so old JWTs are not reused.
+Handy seeded flows:
+
+| Flow | What to open |
+|------|----------------|
+| Catalog / register | **Neon Night Market**, **Harbor Tech Meetup** |
+| Waitlist / promote | **Rooftop Jazz** (cap 2): login `seat_a@` → cancel → `teammate@` auto-promotes; `waitlist_b@` stays waitlisted |
+| Check-in + QR | **Live Check-In Night** (`ONGOING`; attendee has a ticket) |
+| Analytics | **Winter Lights (Past)** + other seeded regs/revenue |
+| Draft (organiser only) | **Draft Workshop** |
+
+Sign out (or clear localStorage) after a flush/reseed so old JWTs are not reused.
 
 ### Required `.env` (placeholder names only)
 
