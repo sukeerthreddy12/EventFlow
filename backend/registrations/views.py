@@ -173,7 +173,7 @@ class RegistrationCancelView(APIView):
                 uid = str(obj.user_id)
                 eid = str(locked_event.id)
                 transaction.on_commit(
-                    lambda: send_waitlist_promoted_task.delay(uid, eid)
+                    lambda uid=uid, eid=eid: send_waitlist_promoted_task.delay(uid, eid)
                 )
             else:
                 obj.status = TeamRegistration.Status.CONFIRMED
